@@ -72,7 +72,7 @@ namespace ui
     }
 
     // Power (partial fill only if changed)
-    power = current * power;
+    power = current * voltage;
     if (lastPower != power) {
       tft.setTextSize(1);
 
@@ -87,40 +87,29 @@ namespace ui
       tft.print(" W");
       lastPower = power;
     }
-
-    setSmallFont();
-
     // Indicators (CC/CV and others) - partial update if status changed
-    if (isCV != lastIsCV) {
+    if (isCV != lastIsCV || loadOn != lastLoadOn || protectOVP != lastProtectOVP || protectOCP != lastProtectOCP || protectOTP != lastProtectOTP)
+    {
+      setSmallFont();
       tft.setTextColor(isCV ? ST7796S_GREEN : ST7796S_RED);
-      tft.setCursor(90, 300);
-      tft.print("CV ");
+      tft.setCursor(60, 300);
+      tft.print("CV    ");
       tft.setTextColor(!isCV ? ST7796S_GREEN : ST7796S_RED);
-      tft.print("CC ");
-    }
-    if (protectOVP != lastProtectOVP) {
+      tft.print("CC    ");
       tft.setTextColor(protectOVP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OVP ");
-    }
-    if (protectOCP != lastProtectOCP) {
+      tft.print("OVP    ");
       tft.setTextColor(protectOCP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OCP ");
-
-    }
-    if (protectOTP != lastProtectOTP) {
+      tft.print("OCP    ");
       tft.setTextColor(protectOTP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OTP ");
-
-    }
-    if (loadOn != lastLoadOn) {
+      tft.print("OTP    ");
       tft.setTextColor(loadOn ? ST7796S_GREEN : ST7796S_RED);
       tft.print("OUT");
+
+      lastIsCV = isCV;
+      lastLoadOn = loadOn;
+      lastProtectOVP = protectOVP;
+      lastProtectOCP = protectOCP;
+      lastProtectOTP = protectOTP;
     }
-    
-    lastIsCV = isCV;
-    lastLoadOn = loadOn;
-    lastProtectOVP = protectOVP;
-    lastProtectOCP = protectOCP;
-    lastProtectOTP = protectOTP;
   }
 }
