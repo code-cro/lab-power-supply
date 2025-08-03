@@ -45,7 +45,7 @@ void setup() {
   // Init SPI
   SPI.begin();
   SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(SPI_CLOCK_DIV2);
+  SPI.setClockDivider(SPI_CLOCK_DIV64);
 
   // Initialize TFT
   tft.begin();
@@ -70,7 +70,7 @@ void loop() {
   current = 10.1 + (random(-3, 4) / 1000.0);     // ±0.003A
 
   // Update UI at fixed interval (default 500ms)
-  if (currentTime - lastUpdate >= 500) {
+  if (currentTime - lastUpdate >= 50) {
     ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP);
     lastUpdate = currentTime;
   }

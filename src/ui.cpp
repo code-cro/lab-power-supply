@@ -1,7 +1,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7796S_kbv.h>
-#include <font_small.h> 
-#include <font_large.h>
+#include <RobotoMono_Regular12pt7b.h> 
+#include <RobotoMono_Regular32pt7b.h> 
 #include "pins.hpp"
 #include "ui.hpp"
 
@@ -10,13 +10,13 @@ extern Adafruit_ST7796S_kbv tft;
 namespace ui
 {
   void setSmallFont(void) {
-    tft.setFont(&FontSmall);
-    tft.setTextSize(1);
+    tft.setFont(&RobotoMono_Regular12pt7b);
+    // tft.setTextSize(1);
   }
 
   void setLargeFont(void) {
-    tft.setFont(&FontLarge);
-    tft.setTextSize(1);
+    tft.setFont(&RobotoMono_Regular32pt7b);
+    // tft.setTextSize(1);
   }
 
   void drawPage(int page, float voltage, float current, bool isCV, bool loadOn, bool protectOVP, bool protectOCP, bool protectOTP)
@@ -45,11 +45,11 @@ namespace ui
     if (voltage != lastVoltage)
     {
       tft.setTextColor(ST7796S_BLACK);
-      tft.setCursor(120, 80);
+      tft.setCursor(100, 80);
       tft.print(lastVoltage, 3);
 
       tft.setTextColor(ST7796S_WHITE);
-      tft.setCursor(120, 80);
+      tft.setCursor(100, 80);
       tft.print(voltage, 3);
       tft.setCursor(310, 80);
       tft.print(" V");
@@ -60,11 +60,11 @@ namespace ui
     if (current != lastCurrent)
     {
       tft.setTextColor(ST7796S_BLACK);
-      tft.setCursor(120, 150);
+      tft.setCursor(100, 150);
       tft.print(lastCurrent, 3);
 
       tft.setTextColor(ST7796S_WHITE);
-      tft.setCursor(120, 150);
+      tft.setCursor(100, 150);
       tft.print(current, 3);
       tft.setCursor(310, 150);
       tft.print(" A");
@@ -77,12 +77,12 @@ namespace ui
       tft.setTextSize(1);
 
       tft.setTextColor(ST7796S_BLACK);
-      tft.setCursor(120, 220);
-      tft.print(lastPower, 3);
+      tft.setCursor(100, 220);
+      tft.print(lastPower, 2);
 
-      tft.setTextColor(ST7796S_GREENYELLOW);
-      tft.setCursor(120, 220);
-      tft.print(power, 3);
+      tft.setTextColor(ST7796S_PURPLE);
+      tft.setCursor(100, 220);
+      tft.print(power, 2);
       tft.setCursor(310, 220);
       tft.print(" W");
       lastPower = power;
@@ -91,17 +91,18 @@ namespace ui
     if (isCV != lastIsCV || loadOn != lastLoadOn || protectOVP != lastProtectOVP || protectOCP != lastProtectOCP || protectOTP != lastProtectOTP)
     {
       setSmallFont();
+
       tft.setTextColor(isCV ? ST7796S_GREEN : ST7796S_RED);
       tft.setCursor(60, 300);
-      tft.print("CV    ");
+      tft.print("CV  ");
       tft.setTextColor(!isCV ? ST7796S_GREEN : ST7796S_RED);
-      tft.print("CC    ");
+      tft.print("CC  ");
       tft.setTextColor(protectOVP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OVP    ");
+      tft.print("OVP  ");
       tft.setTextColor(protectOCP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OCP    ");
+      tft.print("OCP  ");
       tft.setTextColor(protectOTP ? ST7796S_RED : ST7796S_GREEN);
-      tft.print("OTP    ");
+      tft.print("OTP  ");
       tft.setTextColor(loadOn ? ST7796S_GREEN : ST7796S_RED);
       tft.print("OUT");
 
