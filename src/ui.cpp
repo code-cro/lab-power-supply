@@ -1,7 +1,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7796S_kbv.h>
-#include <font12pt.h>
-#include <font18pt.h>
+#include <font_small.h> 
+#include <font_large.h>
 #include "pins.hpp"
 #include "ui.hpp"
 
@@ -27,7 +27,7 @@ namespace ui
     static bool lastProtectOCP = false;
     static bool lastProtectOTP = false;
 
-    tft.setFont(&Font18pt7b);
+    tft.setFont(&FontLarge);
     tft.setTextSize(1);
 
     // Voltage (partial fill only if changed)
@@ -66,7 +66,7 @@ namespace ui
     // Indicators (CC/CV and others) - partial update if status changed
     if (isCV != lastIsCV || loadOn != lastLoadOn || protectOVP != lastProtectOVP || protectOCP != lastProtectOCP || protectOTP != lastProtectOTP)
     {
-      tft.setFont(&Font12pt7b);
+      tft.setFont(&FontSmall);
       tft.setTextSize(1);
       tft.fillRect(60, 300 - 72, 480, 72, ST7796S_BLACK); // Clear only indicator area
       tft.setTextColor(isCV ? ST7796S_GREEN : ST7796S_RED);

@@ -1,8 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7796S_kbv.h>
 #include <SPI.h>
-#include <digital_720pt7b.h> // Custom 72pt font
-#include "colors.hpp"
 #include "pins.hpp"
 #include "ui.hpp"
 
@@ -52,7 +50,7 @@ void setup() {
   // Initialize TFT
   tft.begin();
   tft.setRotation(1);
-  tft.fillScreen(BLACK); // Initial full clear
+  tft.fillScreen(ST7796S_BLACK); // Initial full clear
 
   // Encoder and Switch
   pinMode(ENC_CLK, INPUT_PULLUP);
