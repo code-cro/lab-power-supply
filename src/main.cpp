@@ -76,7 +76,6 @@ void drawValue(const char* label, int x, int y, bool current, bool& last) {
 }
 
 void setup() {
-  Serial.begin(115200);
 
   // Init display
   tft.begin();
