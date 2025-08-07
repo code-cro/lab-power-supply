@@ -1,79 +1,106 @@
+#include <Arduino.h>
+#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7796S_kbv.h>
-#include <SPI.h>
 #include "pins.hpp"
 #include "ui.hpp"
+#include "input.hpp"
 
-// Initialize TFT
-Adafruit_ST7796S_kbv tft(TFT_CS, TFT_DC, TFT_RST); // Matches pins.hpp
+// Fonts
+#include <RobotoMono_Regular12pt7b.h>
+#include <RobotoMono_Regular24pt7b.h>
+
+// Display instance
+Adafruit_ST7796S_kbv tft = Adafruit_ST7796S_kbv(TFT_CS, TFT_DC, TFT_RST);
 
 // System state
-float voltage = 24.32; // Base dummy data
-float current = 2.1;   // Base dummy data (100mA)
+int currentPage = 0;
+const int totalPages = 2; // Main View (0), Input Test (1)
+float voltage = 24.32; // Dummy data
+float current = 2.1;   // Dummy data
 bool isCV = true;
 bool loadOn = false;
 bool protectOVP = false;
 bool protectOCP = false;
 bool protectOTP = false;
-volatile int currentPage = 0;
-volatile int lastCLK = 1;
-const int encSwPin = PB8; // Rotary switch pin set to PB8
-
-// Timing for fixed updates
-unsigned long lastUpdate = 0;
-
-void checkEncoder() {
-  int clkState = digitalRead(ENC_CLK);
-  if (clkState != lastCLK) {
-    // No page change, keep on Main view (page 0)
-    ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP);
-  }
-  lastCLK = clkState;
-}
-
-void checkSwitch() {
-  if (digitalRead(encSwPin) == LOW) { // Assuming active LOW switch
-    delay(50); // Debounce
-    if (digitalRead(encSwPin) == LOW) {
-      // No action, keep on Main view
-      ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP);
-    }
-  }
-}
+int encoderPos = 0;
+bool encBtnShort = false;
+bool encBtnLong = false;
+bool btnSet = false;
+bool btnFine = false;
+bool btnOut = false;
 
 void setup() {
-  // Init SPI
-  SPI.begin();
-  SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(SPI_CLOCK_DIV64);
+  // Initialize inputs
+  input::init();
 
-  // Initialize TFT
+  // I2C Touch controller (for future use)
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  // Initialize display
   tft.begin();
   tft.setRotation(1);
-  tft.fillScreen(ST7796S_BLACK); // Initial full clear
+  tft.fillScreen(ST7796S_BLACK);
+  tft.setFont(&RobotoMono_Regular24pt7b);
+  tft.setTextColor(ST7796S_WHITE);
+  tft.setCursor(20, 30);
+  tft.println("Starting...");
 
-  // Encoder and Switch
-  pinMode(ENC_CLK, INPUT_PULLUP);
-  pinMode(ENC_DT, INPUT_PULLUP);
-  pinMode(encSwPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(ENC_CLK), checkEncoder, CHANGE);
-
-  // Initial UI
-  ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP);
+  delay(1000);
 }
 
 void loop() {
-  unsigned long currentTime = millis();
+  // Poll inputs
+  input::poll();
+  input::Action action = input::getAction();
 
-  // Add floating effect: ±30mV (0.03V) for voltage, ±3mA (0.003A) for current
-  voltage = 32.32 + (random(-30, 31) / 1000.0); // ±0.03V
-  current = 10.1 + (random(-3, 4) / 1000.0);     // ±0.003A
-
-  // Update UI at fixed interval (default 500ms)
-  if (currentTime - lastUpdate >= 50) {
-    ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP);
-    lastUpdate = currentTime;
+  // Process input actions
+  switch (action) {
+    case input::Action::RotateCW:
+      currentPage = (currentPage + 1) % totalPages; // Circular increment
+      break;
+    case input::Action::RotateCCW:
+      currentPage = (currentPage - 1 + totalPages) % totalPages; // Circular decrement
+      break;
+    case input::Action::Press:
+      encBtnShort = true;
+      break;
+    case input::Action::LongPress:
+      encBtnLong = true;
+      break;
+    case input::Action::Btn1:
+      btnSet = true;
+      break;
+    case input::Action::Btn2:
+      btnFine = true;
+      break;
+    case input::Action::Btn3:
+      btnOut = true;
+      break;
+    default:
+      break;
   }
 
-  checkSwitch(); // Check for rotary switch press
+  // Update button states based on pin readings
+  btnSet = digitalRead(BTN_SET) == LOW || btnSet;
+  btnFine = digitalRead(BTN_FINE) == LOW || btnFine;
+  btnOut = digitalRead(BTN_OUT) == LOW || btnOut;
+
+  // Reset button states if pins are released and no new action
+  if (action != input::Action::Press) encBtnShort = false;
+  if (action != input::Action::LongPress) encBtnLong = false;
+  if (action != input::Action::Btn1 && digitalRead(BTN_SET) == HIGH) btnSet = false;
+  if (action != input::Action::Btn2 && digitalRead(BTN_FINE) == HIGH) btnFine = false;
+  if (action != input::Action::Btn3 && digitalRead(BTN_OUT) == HIGH) btnOut = false;
+
+  // Update encoder position for Input Test Page
+  if (currentPage == 1) {
+    if (action == input::Action::RotateCW) encoderPos++;
+    if (action == input::Action::RotateCCW) encoderPos--;
+  }
+
+  // Update display
+  ui::drawPage(currentPage, voltage, current, isCV, loadOn, protectOVP, protectOCP, protectOTP, encoderPos, encBtnShort, encBtnLong, btnSet, btnFine, btnOut);
+
+  delay(50);
 }
