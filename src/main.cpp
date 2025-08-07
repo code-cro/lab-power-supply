@@ -1,147 +1,80 @@
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7796S_kbv.h>
+#include "pins.hpp" // Use provided pin definitions
 
-// --- Pin Configuration ---
-#define ENC_CLK PB6
-#define ENC_DT  PB7
-#define ENC_SW  PB8
+// TFT pins from pins.hpp
+#define TFT_CS  PA4
+#define TFT_DC  PA2
+#define TFT_RST PA1
 
-#define BTN_SET  PB3
-#define BTN_FINE PB4
-#define BTN_OUT  PB5
+// Button pins from pins.hpp
+#define BTN_SET  PB5  // Set voltage/current
+#define BTN_FINE PB4  // Fine/rough toggle
+#define BTN_OUT  PB3  // Output enable/disable
 
-#define TFT_CS   PA4
-#define TFT_DC   PA2
-#define TFT_RST  PA1
-#define TFT_SCK  PA5
-#define TFT_MOSI PA7
-
-// --- Display ---
+// TFT instance
 Adafruit_ST7796S_kbv tft = Adafruit_ST7796S_kbv(TFT_CS, TFT_DC, TFT_RST);
 
-// --- Rotary Encoder State ---
-volatile int16_t encoderPosition = 0;
-int16_t lastEncoderPosition = 0;
-int8_t lastEncoded = 0;
+// Button arrays
+const uint8_t buttons[] = {BTN_SET, BTN_FINE, BTN_OUT};
+const char* buttonNames[] = {"SET", "FINE", "OUT"};
 
-// --- Encoder ISR ---
-void encoderISR() {
-  int MSB = digitalRead(ENC_CLK);
-  int LSB = digitalRead(ENC_DT);
-  int encoded = (MSB << 1) | LSB;
-  int sum = (lastEncoded << 2) | encoded;
-
-  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011)
-    encoderPosition++;
-  else if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000)
-    encoderPosition--;
-
-  lastEncoded = encoded;
-}
-
-// --- Encoder Button ---
-bool encoderPressed = false;
-void encoderButtonISR() {
-  encoderPressed = true;
-}
-
-// --- Button States ---
 bool buttonStates[3] = {false, false, false};
 bool lastButtonStates[3] = {false, false, false};
-const uint8_t buttons[] = {BTN_SET, BTN_FINE, BTN_OUT};
 
-// --- Debounce ---
-const unsigned long debounceDelay = 50;
+const unsigned long debounceDelay = 30;
 unsigned long lastDebounceTimes[3] = {0, 0, 0};
 
-// --- UI Helpers ---
-void drawLabel(const char* label, int x, int y) {
-  tft.setTextColor(ST7796S_WHITE);
-  tft.setCursor(x, y);
-  tft.print(label);
-}
-
-void drawValue(const char* label, int x, int y, bool current, bool& last) {
-  if (current != last) {
-    tft.setTextColor(ST7796S_BLACK);
-    tft.setCursor(x, y);
-    tft.print(last ? "YES" : "NO ");
-
-    tft.setTextColor(ST7796S_WHITE);
-    tft.setCursor(x, y);
-    tft.print(current ? "YES" : "NO ");
-    last = current;
-  }
-}
-
 void setup() {
-
-  // Init display
-  tft.begin();
-  tft.setRotation(1);
-  tft.fillScreen(ST7796S_BLACK);
-  tft.setTextSize(2);
-
-  // Labels
-  drawLabel("Encoder:", 20, 40);
-  drawLabel("Pressed:", 20, 80);
-  drawLabel("Btn1 SET:", 20, 120);
-  drawLabel("Btn2 FINE:", 20, 160);
-  drawLabel("Btn3 OUT:", 20, 200);
-
-  // Pins
-  pinMode(ENC_CLK, INPUT_PULLUP);
-  pinMode(ENC_DT, INPUT_PULLUP);
-  pinMode(ENC_SW, INPUT_PULLUP);
+  // Initialize button pins as INPUT_PULLUP (per pins.hpp usage)
   pinMode(BTN_SET, INPUT_PULLUP);
   pinMode(BTN_FINE, INPUT_PULLUP);
   pinMode(BTN_OUT, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(ENC_CLK), encoderISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENC_DT), encoderISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENC_SW), encoderButtonISR, FALLING);
+  // Initialize TFT
+  tft.begin();
+  tft.setRotation(1);
+  tft.fillScreen(ST7796S_BLACK);
+  tft.setTextColor(ST7796S_WHITE);
+  tft.setCursor(20, 30);
+  tft.println("Button Test");
 }
 
 void loop() {
-  static int16_t displayedEncoder = 0;
-  if (encoderPosition != displayedEncoder) {
-    tft.setTextColor(ST7796S_BLACK);
-    tft.setCursor(160, 40);
-    tft.print(displayedEncoder);
+  bool updated = false;
 
-    tft.setTextColor(ST7796S_WHITE);
-    tft.setCursor(160, 40);
-    tft.print(encoderPosition);
-    displayedEncoder = encoderPosition;
-  }
-
-  static bool lastEncoderPressed = false;
-  if (encoderPressed != lastEncoderPressed) {
-    tft.setTextColor(ST7796S_BLACK);
-    tft.setCursor(160, 80);
-    tft.print(lastEncoderPressed ? "YES" : "NO ");
-
-    tft.setTextColor(ST7796S_WHITE);
-    tft.setCursor(160, 80);
-    tft.print(encoderPressed ? "YES" : "NO ");
-
-    lastEncoderPressed = encoderPressed;
-    encoderPressed = false;  // reset after display
-  }
-
+  // Check button states
   for (int i = 0; i < 3; i++) {
-    bool reading = digitalRead(buttons[i]) == LOW;
+    bool reading = digitalRead(buttons[i]) == LOW; // Active LOW
+
     if (reading != lastButtonStates[i]) {
       lastDebounceTimes[i] = millis();
     }
+
     if ((millis() - lastDebounceTimes[i]) > debounceDelay) {
       if (reading != buttonStates[i]) {
         buttonStates[i] = reading;
+        updated = true; // Mark for display update
       }
     }
-    drawValue("", 160, 120 + (i * 40), buttonStates[i], lastButtonStates[i]);
+
+    lastButtonStates[i] = reading;
   }
 
-  delay(20);
+  // Update TFT display if any button state changed
+  if (updated) {
+    tft.fillRect(20, 50, 440, 150, ST7796S_BLACK); // Clear display area
+    tft.setTextSize(1);
+
+    for (int i = 0; i < 3; i++) {
+      tft.setCursor(20, 80 + i * 40);
+      tft.setTextColor(buttonStates[i] ? ST7796S_GREEN : ST7796S_RED);
+      tft.print(buttonNames[i]);
+      tft.print(": ");
+      tft.print(buttonStates[i] ? "PRESSED" : "RELEASED");
+    }
+  }
+
+  delay(10);
 }
